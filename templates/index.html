@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Data Sensor</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f7fc;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+
+        h1 {
+            text-align: center;
+            color: #4CAF50;
+            margin-top: 20px;
+        }
+
+        #data-display {
+            margin: 20px auto;
+            width: 80%;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        td {
+            background-color: #f9f9f9;
+        }
+
+        td:hover {
+            background-color: #e1e1e1;
+        }
+
+        h2, h3 {
+            color: #333;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 150%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+            padding-top: 60px;
+            transform: translate(0%, -5%);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 60%;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .modal-header {
+            font-size: 1.5em;
+            margin-bottom: 20px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        form {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        label {
+            display: block;
+            margin: 10px 0 5px;
+            font-weight: bold;
+        }
+
+        input[type="number"], input[type="text"] {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background-color: #45a049;
+        }
+
+        .container {
+            width: 90%;
+            margin: 0 auto;
+        }
+
+        .header {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        /* Tambahan CSS untuk tombol mengambang */
+        #addDataBtn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 50px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+
+        #addDataBtn:hover {
+            background-color: #45a049;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Data Sensor</h1>
+        <div id="data-display">
+            <!-- Data dari JSON akan ditampilkan di sini -->
+        </div>
+
+        <button id="addDataBtn">Tambah Data</button>
+
+        <!-- Modal untuk Menambahkan Data -->
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+                <span class="close">&times;</span>
+                <div class="modal-header">Tambah Data Sensor</div>
+                <form id="data-form">
+                    <label>Index:</label>
+                    <input type="number" id="idx" name="idx" required><br>
+
+                    <label>Suhu:</label>
+                    <input type="number" id="suhu" name="suhu" required><br>
+
+                    <label>Humidity:</label>
+                    <input type="number" id="humidity" name="humidity" required><br>
+
+                    <label>Kecerahan:</label>
+                    <input type="number" id="kecerahan" name="kecerahan" required><br>
+
+                    <button type="button" onclick="postData()">Kirim Data</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let existingData = {};
+
+        async function fetchData() {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/data');
+                const jsonData = await response.json();
+                existingData = jsonData;
+                displayData(jsonData);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+            }
+        }
+
+        function formatTimestamp(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+        
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+
+        function displayData(data) {
+            const dataDisplay = document.getElementById('data-display');
+            
+            // Menampilkan data suhu max, min, rata-rata
+            let tableHTML = `<h3>Data Suhu:</h3>
+                             <table border="1">
+                                 <tr>
+                                     <th>Suhu Max</th>
+                                     <th>Suhu Min</th>
+                                     <th>Suhu Rata-rata</th>
+                                 </tr>
+                                 <tr>
+                                     <td>${data.suhumax}</td>
+                                     <td>${data.suhumin}</td>
+                                     <td>${data.suhurata}</td>
+                                 </tr>
+                             </table>`;
+
+            tableHTML += `<h3>Nilai Suhu Max dan Kelembaban:</h3>
+                          <table border="1">
+                              <tr>
+                                  <th>Index</th>
+                                  <th>Suhu</th>
+                                  <th>Humidity</th>
+                                  <th>Kecerahan</th>
+                                  <th>Timestamp</th>
+                              </tr>`;
+            data.nilai_suhu_max_humid_max.forEach(item => {
+                tableHTML += `<tr>
+                                  <td>${item.idx}</td>
+                                  <td>${item.suhu}</td>
+                                  <td>${item.humid}</td>
+                                  <td>${item.kecerahan}</td>
+                                  <td>${item.timestamp}</td>
+                              </tr>`;
+            });
+            tableHTML += `</table>`;
+
+            tableHTML += `<h3>Month-Year Max:</h3>
+                          <table border="1">
+                              <tr>
+                                  <th>Month-Year</th>
+                              </tr>`;
+            data.month_year_max.forEach(item => {
+                tableHTML += `<tr><td>${item.month_year}</td></tr>`;
+            });
+            tableHTML += `</table>`;
+
+            dataDisplay.innerHTML = tableHTML;
+        }
+
+        async function postData() {
+            const suhu = document.getElementById('suhu').value;
+            const humidity = document.getElementById('humidity').value;
+            const kecerahan = document.getElementById('kecerahan').value;
+            const idx = document.getElementById('idx').value;
+            const timestamp = formatTimestamp(new Date());
+
+            const newData = {
+                idx: parseFloat(idx),
+                suhu: parseFloat(suhu),
+                humid: parseFloat(humidity),
+                kecerahan: parseFloat(kecerahan),
+                timestamp: timestamp
+            };
+
+            existingData.nilai_suhu_max_humid_max.push(newData);
+
+            const dataToSend = {
+                nilai_suhu_max_humid_max: existingData.nilai_suhu_max_humid_max
+            };
+
+            try {
+                const response = await fetch('http://127.0.0.1:5000/data', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dataToSend)
+                });
+
+                if (response.ok) {
+                    fetchData();
+                    closeModal();
+                } else {
+                    console.error('Failed to send data');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Modal functionality
+        const modal = document.getElementById('myModal');
+        const addDataBtn = document.getElementById('addDataBtn');
+        const closeModalBtn = document.querySelector('.close');
+
+        addDataBtn.onclick = function() {
+            modal.style.display = 'block';
+        }
+
+        closeModalBtn.onclick = function() {
+            modal.style.display = 'none';
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function closeModal() {
+            modal.style.display = 'none';
+        }
+
+        // Fetch data when the page loads
+        window.onload = fetchData;
+    </script>
+</body>
+</html>
